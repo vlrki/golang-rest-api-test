@@ -1,56 +1,63 @@
 package main
 
 import (
-    "fmt"
-    "log/slog"
-    "os"
-    "url-shortener/internal/config"
+	"fmt"
+	"log/slog"
+	"os"
+	"url-shortener/internal/config"
+	"url-shortener/internal/lib/logger/sl"
+	"url-shortener/internal/sqlite"
 )
 
 const (
-    envLocal = "local"
-    envDev   = "dev"
-    envProd  = "prod"
+	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
 )
 
 func main() {
-    // TODO: init config: cleanenv
-    cfg := config.MustLoad()
+	// TODO: init config: cleanenv
+	cfg := config.MustLoad()
 
-    fmt.Println(cfg)
+	fmt.Println(cfg)
 
-    log := setupLogger(cfg.Env)
-    log = log.With(slog.String("env", cfg.Env)) // к каждому сообщению будет добавляться поле с информацией о текущем окружении
+	log := setupLogger(cfg.Env)
+	log = log.With(slog.String("env", cfg.Env)) // к каждому сообщению будет добавляться поле с информацией о текущем окружении
 
-    log.Info("initializing server", slog.String("address", cfg.Address)) // Помимо сообщения выведем параметр с адресом
-    log.Debug("logger debug mode enabled")
+	log.Info("initializing server", slog.String("address", cfg.Address)) // Помимо сообщения выведем параметр с адресом
+	log.Debug("logger debug mode enabled")
 
-    // TODO: init logger: slog
+	storage, err := sqlite.New(cfg.StoragePath)
 
-    // TODO: init storage: sqlite
+	if err != nil {
+		log.Error("failed to init storage", sl.Err(err))
+		os.Exit(1)
+	}
 
-    // TODO: init router: chi, "chi render"
+	_ = storage
 
-    // TODO: run server
+	// TODO: init router: chi, "chi render"
+
+	// TODO: run server
 }
 
 func setupLogger(env string) *slog.Logger {
-    var log *slog.Logger
+	var log *slog.Logger
 
-    switch env {
-    case envLocal:
-        log = slog.New(
-            slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-        )
-    case envDev:
-        log = slog.New(
-            slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-        )
-    case envProd:
-        log = slog.New(
-            slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-        )
-    }
+	switch env {
+	case envLocal:
+		log = slog.New(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envDev:
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envProd:
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
+	}
 
-    return log
+	return log
 }
